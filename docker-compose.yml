@@ -9,14 +9,27 @@ networks:
 
 # All the Containers
 services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./nginx-proxy/proxy.conf:/etc/nginx/conf.d/proxy.conf:ro
+    networks:
+      - frontend
+      - backend
+
   # Ghost
   ghost:
     build:
       context: ./ghost
     environment:
-      url: ${GHOST_URL}
+      VIRTUAL_HOST: ${HOST_GHOST}
+      url: http://${HOST_GHOST}
       database__client: mysql
-      database__connection__host: mysql
+      database__connection__host: mysql_ghost
       database__connection__user: ${DB_USERNAME}
       database__connection__password: ${DB_PASSWORD}
       database__connection__database: ghost
@@ -27,18 +40,15 @@ services:
       GHOST_STORAGE_ADAPTER_S3_PATH_BUCKET: ${GHOST_STORAGE_ADAPTER_S3_PATH_BUCKET}
       GHOST_STORAGE_ADAPTER_S3_PATH_PREFIX: ${GHOST_STORAGE_ADAPTER_S3_PATH_PREFIX}
       GHOST_STORAGE_ADAPTER_S3_ASSET_HOST: ${GHOST_STORAGE_ADAPTER_S3_ASSET_HOST}
-    ports:
-      - 80:80
-      - 443:443
     restart: always
     depends_on:
-      - mysql
+      - mysql_ghost
     networks:
       - frontend
       - backend
 
   # MySQL Server
-  mysql:
+  mysql_ghost:
     build:
       context: ./mysql
       args:
